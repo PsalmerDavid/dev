@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Excel to Table (DD 3 Times)</title>
+  <!-- Make page responsive -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Some basic responsive styling -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    input[type="file"] {
+      display: block;
+      margin: 20px auto;
+    }
+    table {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      border-collapse: collapse;
+      border: 1px solid #ccc;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f2f2f2;
+    }
+    @media (max-width: 600px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100%;
+      }
+      thead tr {
+        display: none; /* Hide table header on small screens */
+      }
+      td {
+        position: relative;
+        padding-left: 50%;
+        box-sizing: border-box;
+      }
+      td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
+        width: 45%;
+        padding-right: 10px;
+        font-weight: bold;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Excel to Table (DD 3)</h1>
+  
+  <!-- File input to select Excel file -->
+  <input type="file" id="excelFile" accept=".xlsx, .xls" />
+  
+  <!-- Table to display the result -->
+  <table id="displayTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Dep</th>
+        <th>Time In (DD 3)</th>
+        <th>Time Out (DD 3)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Populated by JavaScript -->
+    </tbody>
+  </table>
+
+  <!-- SheetJS (xlsx) library from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    const fileInput = document.getElementById('excelFile');
+    fileInput.addEventListener('change', handleFile, false);
+
+    function handleFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        // Assuming the data is on the first sheet
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        
+        // Convert to a 2D array of rows
+        const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        
+        // Variables to store the extracted info
+        let ID = "";
+        let Name = "";
+        let Dep = "";
+        let timeIn = "";
+        let timeOut = "";
+
+        // 1) Extract ID, Name, Dep from rows that contain them
+        //    (Adjust logic according to how your file is structured)
+        sheetData.forEach(row => {
+          if (Array.isArray(row)) {
+            // Example row might be: ["ID:", "5", "Name:", "BANDOJO E", "Dep.:", "ELUPDD"]
+            if (row.includes("ID:")) {
+              const idx = row.indexOf("ID:") + 1;
+              if (idx < row.length) {
+                ID = row[idx];
+              }
+            }
+            if (row.includes("Name:")) {
+              const idx = row.indexOf("Name:") + 1;
+              if (idx < row.length) {
+                Name = row[idx];
+              }
+            }
+            if (row.includes("Dep.:") || row.includes("Dep:")) {
+              const idx = row.indexOf("Dep.:") + 1;
+              if (idx < row.length) {
+                Dep = row[idx];
+              }
+            }
+          }
+        });
+
+        // 2) Find times for DD 3. Suppose the row or column labeled "DD" at column 3
+        //    has multiple time entries. We want the FIRST as timeIn and LAST as timeOut.
+        //    Adjust this logic to match your file's layout.
+        //
+        //    For example, from your screenshot, if "DD" is repeated in the first column
+        //    and times appear in columns 3, we can gather them into an array and pick first & last.
+
+        let dd3Times = [];
+        // A simple approach: search for the row that has "DD" or "DD 3", then grab times from that row.
+        // The actual logic depends on your file structure.
+
+        sheetData.forEach(row => {
+          if (!Array.isArray(row)) return;
+
+          // Example: row might look like ["DD", <blank>, "08:16", "12:51"]
+          // or it might have "DD 3" somewhere. Modify as needed.
+
+          // If the row starts with "DD" or includes "DD 3", 
+          // we attempt to parse times from the rest of that row.
+          if (row[0] === "DD" || row.includes("DD 3")) {
+            // We assume times are in that row (for column 3, 4, etc.).
+            // Filter out valid time strings (e.g. "08:16", "18:40")
+            const potentialTimes = row.filter(cell => typeof cell === "string" && cell.match(/^\d{2}:\d{2}$/));
+            dd3Times = dd3Times.concat(potentialTimes);
+          }
+        });
+
+        // If dd3Times has multiple times (e.g. ["08:16", "12:51", "12:51", "18:40"]),
+        // the first is Time In, the last is Time Out.
+        if (dd3Times.length >= 2) {
+          timeIn = dd3Times[0];
+          timeOut = dd3Times[dd3Times.length - 1];
+        }
+
+        // 3) Populate the table with the extracted data
+        const tbody = document.querySelector("#displayTable tbody");
+        tbody.innerHTML = ""; // clear existing rows, if any
+
+        const row = document.createElement("tr");
+
+        const tdID = document.createElement("td");
+        tdID.textContent = ID;
+        row.appendChild(tdID);
+
+        const tdName = document.createElement("td");
+        tdName.textContent = Name;
+        row.appendChild(tdName);
+
+        const tdDep = document.createElement("td");
+        tdDep.textContent = Dep;
+        row.appendChild(tdDep);
+
+        const tdTimeIn = document.createElement("td");
+        tdTimeIn.textContent = timeIn;
+        row.appendChild(tdTimeIn);
+
+        const tdTimeOut = document.createElement("td");
+        tdTimeOut.textContent = timeOut;
+        row.appendChild(tdTimeOut);
+
+        tbody.appendChild(row);
+      };
+
+      // Read the file as an array buffer
+      reader.readAsArrayBuffer(file);
+    }
+  </script>
+</body>
+</html>

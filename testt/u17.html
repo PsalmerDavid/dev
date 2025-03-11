@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Extract Data from Excel + Date Picker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    /* Hide the date picker input */
+    #datePicker {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Extract Data from Excel + Date Picker</h1>
+  
+  <!-- Date Picker Button and Hidden Date Input -->
+  <button id="dateButton"></button>
+  <input type="date" id="datePicker" />
+  
+  <p>Select an Excel file to extract employee data.</p>
+  <input type="file" id="excelFile" accept=".xlsx, .xls" />
+  
+  <div id="output"></div>
+  
+  <!-- Include SheetJS Library -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    /****************************************************
+     * 1) DATE PICKER LOGIC
+     ****************************************************/
+    const dateButton = document.getElementById('dateButton');
+    const datePicker = document.getElementById('datePicker');
+
+    // If you want to hardcode a "default" date (e.g., 2025-03-09), do so here:
+    // const defaultDate = "2025-03-09";
+    // datePicker.value = defaultDate;
+    // dateButton.textContent = formatDate(new Date(defaultDate));
+
+    // Otherwise, use today's date as the default:
+    const today = new Date();
+    datePicker.value = today.toISOString().split("T")[0];
+    dateButton.textContent = formatDate(today);
+
+    dateButton.addEventListener('click', () => {
+      // Some browsers support showPicker()
+      if (typeof datePicker.showPicker === 'function') {
+        datePicker.showPicker();
+      } else {
+        datePicker.click();
+      }
+    });
+
+    // Format date for button display
+    function formatDate(dateObj) {
+      const months = [
+        'January','February','March','April','May','June',
+        'July','August','September','October','November','December'
+      ];
+      return `${months[dateObj.getMonth()]} ${dateObj.getDate()} ${dateObj.getFullYear()}`;
+    }
+
+    // When the date changes, update the button text and refresh the table
+    datePicker.addEventListener('change', () => {
+      dateButton.textContent = formatDate(new Date(datePicker.value));
+      updateMatchingTable();
+    });
+
+    // Global variable to store employee data
+    let globalEmployees = [];
+
+    /****************************************************
+     * 2) FUNCTION TO UPDATE THE MATCHING TABLE
+     ****************************************************/
+     function updateMatchingTable() {
+  // If no employees have been loaded yet, do nothing
+  if (!globalEmployees.length) return;
+
+  let matchingTableHtml = "<h2>Employee DD/CK Pairs Matching Current Day</h2>";
+  matchingTableHtml += "<table>";
+  matchingTableHtml += "<tr><th>Employee Name</th><th>DD Value</th><th>CK Value</th><th>Time In</th><th>Time Out</th></tr>";
+
+  // Get the currently selected day as an integer (e.g. 9 for '2025-03-09')
+  const currentDate = new Date(datePicker.value);
+  const currentDay = currentDate.getDate(); // integer day
+
+  // Array to store timestamps for each employee
+  let TimeStamps = [];
+
+  // Build the matching table
+  globalEmployees.forEach(emp => {
+    let foundMatch = false;
+    let employeeTimeStamps = [[], [], [], []]; // Initialize 4 empty arrays for indexes 0-3
+    let timeIn = "";
+    let timeOut = "";
+    
+    emp.ddCkPairs.forEach(pair => {
+      if (foundMatch) return; // only display one row per employee
+      const ddValues = pair[0];
+      const ckValues = pair[1];
+      const count = Math.min(ddValues.length, ckValues.length);
+
+      for (let idx = 0; idx < count; idx++) {
+        const ddVal = (ddValues[idx] || "").toString().trim();
+        const ckVal = (ckValues[idx] || "").toString().trim();
+
+        // Compare as integers so "09" matches 9
+        if (parseInt(ddVal, 10) === currentDay && ckVal !== "") {
+          // Split ckVal by space and distribute values into employeeTimeStamps array
+          const splitValues = ckVal.split(" ");
+          splitValues.forEach((val, index) => {
+            if (index < 4) employeeTimeStamps[index].push(val); // Store up to index 3
+          });
+          
+          // Assign Time In (index 0) and Time Out (index 3) if available
+          timeIn = employeeTimeStamps[0].join(", ") || "N/A";
+          timeOut = employeeTimeStamps[3].join(", ") || "N/A";
+          
+          matchingTableHtml += `<tr>
+            <td>${emp.name}</td>
+            <td>${ddVal}</td>
+            <td>${ckVal}</td>
+            <td>${timeIn}</td>
+            <td>${timeOut}</td>
+          </tr>`;
+          
+          foundMatch = true;
+          break;
+        }
+      }
+    });
+    
+    // Store the employee's timestamps in the main array
+    TimeStamps.push(employeeTimeStamps);
+  });
+
+  matchingTableHtml += "</table>";
+  document.getElementById('matchingTableContainer').innerHTML = matchingTableHtml;
+
+  // Log or use the TimeStamps array as needed
+  console.log("Filtered TimeStamps:", TimeStamps);
+}
+
+
+
+    /****************************************************
+     * 3) EXCEL READING, DD/CK PAIRING & ARRAY CREATION
+     ****************************************************/
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        console.log("All rows:", rows);
+
+        let employees = [];
+
+        // Loop through rows to detect employee header rows (ID, Name, Dep.)
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row) continue;
+
+          const idCellIndex = row.findIndex(cell => typeof cell === 'string' && /ID[:\s]*(\d+)/i.test(cell));
+          const nameCellIndex = row.findIndex(cell => typeof cell === 'string' && /Name[:\s]*([A-Za-z\s]+?)(?=\s+Dep|$)/i.test(cell));
+          const depCellIndex = row.findIndex(cell => typeof cell === 'string' && /Dep\.?[:\s]*([A-Za-z]+)/i.test(cell));
+
+          if (idCellIndex !== -1 && nameCellIndex !== -1 && depCellIndex !== -1) {
+            const id = row[idCellIndex].match(/ID[:\s]*(\d+)/i)[1].trim();
+            const name = row[nameCellIndex].match(/Name[:\s]*([A-Za-z\s]+?)(?=\s+Dep|$)/i)[1].trim();
+            const dep = row[depCellIndex].match(/Dep\.?[:\s]*([A-Za-z]+)/i)[1].trim();
+            console.log("Found employee header at row", i, { id, name, dep });
+
+            // Define employee block: from header row until one row after a row containing 'CK' and 31.
+            const startIndex = i;
+            let endIndex = rows.length - 1;
+            for (let j = i + 1; j < rows.length; j++) {
+              const rowJ = rows[j];
+              if (!rowJ) continue;
+              const hasCK = rowJ.some(cell => typeof cell === 'string' && cell.toLowerCase().includes('ck'));
+              const has31 = rowJ.some(cell => parseFloat(cell) === 31);
+              if (hasCK && has31) {
+                endIndex = j + 1;
+                console.log("Found block end at row", j);
+                break;
+              }
+            }
+            console.log("Employee block from row", startIndex, "to", endIndex);
+
+            // Gather the DD/CK pairs within this block
+            let ddCkPairs = [];
+            for (let r = startIndex; r <= endIndex; r++) {
+              const currentRow = rows[r];
+              if (!currentRow || currentRow.length === 0) continue;
+              if (typeof currentRow[0] === 'string' && currentRow[0].trim() === 'DD') {
+                let ddValues = currentRow.slice(1); // include all cells
+                let ckValues = [];
+                if (r + 1 <= endIndex && rows[r + 1] && typeof rows[r + 1][0] === 'string' && rows[r + 1][0].trim() === 'CK') {
+                  ckValues = rows[r + 1].slice(1);
+                }
+                console.log("Found DD/CK pair at rows", r, "and", r+1, { ddValues, ckValues });
+                ddCkPairs.push([ddValues, ckValues]);
+              }
+            }
+            // Store employee data
+            employees.push({ id, name, dep, ddCkPairs });
+          }
+        }
+
+        console.log("Final Employees array:", employees);
+
+        // Store globally for date filtering
+        globalEmployees = employees;
+
+        /***************
+         * TABLES
+         ***************/
+        // 1) Employee Summary
+        let summaryTableHtml = "<h2>Employee Summary</h2>";
+        summaryTableHtml += "<table>";
+        summaryTableHtml += "<tr><th>ID</th><th>Name</th><th>Dep.</th></tr>";
+        employees.forEach(emp => {
+          summaryTableHtml += `<tr>
+            <td>${emp.id}</td>
+            <td>${emp.name}</td>
+            <td>${emp.dep}</td>
+          </tr>`;
+        });
+        summaryTableHtml += "</table>";
+
+        // 2) All DD/CK Pairs
+        let pairTableHtml = "<h2>Employee DD/CK Pairs (All)</h2>";
+        pairTableHtml += "<table>";
+        pairTableHtml += "<tr><th>Employee Name</th><th>DD Value</th><th>CK Value</th></tr>";
+        employees.forEach(emp => {
+          emp.ddCkPairs.forEach(pair => {
+            const ddValues = pair[0];
+            const ckValues = pair[1];
+            const pairCount = Math.min(ddValues.length, ckValues.length);
+            for (let idx = 0; idx < pairCount; idx++) {
+              pairTableHtml += `<tr>
+                <td>${emp.name}</td>
+                <td>${ddValues[idx]}</td>
+                <td>${ckValues[idx]}</td>
+              </tr>`;
+            }
+          });
+        });
+        pairTableHtml += "</table>";
+
+        let matchingTable2Html = "<h2>Employee DD/CK Pairs Matching DD Value '5' (Filtered)</h2>";
+        matchingTable2Html += "<table>";
+        matchingTable2Html += "<tr><th>Employee Name</th><th>DD Value</th><th>CK Value</th></tr>";
+        employees.forEach(emp => {
+          let foundMatch = false;
+          emp.ddCkPairs.forEach(pair => {
+            if (foundMatch) return;
+            const ddValues = pair[0];
+            const ckValues = pair[1];
+            const count = Math.min(ddValues.length, ckValues.length);
+            for (let idx = 0; idx < count; idx++) {
+              const ddVal = ddValues[idx] != null ? ddValues[idx].toString().trim() : "";
+              const ckVal = ckValues[idx] != null ? ckValues[idx].toString().trim() : "";
+              if (ddVal === "5" && ddVal !== "" && ckVal !== "") {
+                matchingTable2Html += `<tr>
+                  <td>${emp.name}</td>
+                  <td>${ddVal}</td>
+                  <td>${ckVal}</td>
+                </tr>`;
+                foundMatch = true;
+                break;
+              }
+            }
+          });
+        });
+        matchingTable2Html += "</table>";
+
+
+        // 3) Container for the filtered (matching) table
+        let outputHtml = "<h2>Extracted Employee Data</h2>";
+        outputHtml += summaryTableHtml + pairTableHtml + matchingTable2Html + `<div id="matchingTableContainer"></div>`;
+        document.getElementById('output').innerHTML = outputHtml;
+
+        // Build the matching table immediately using the current (default) date
+        updateMatchingTable();
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>
+

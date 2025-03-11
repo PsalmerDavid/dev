@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DHSUD Region IV-A - Automated DTR Monitoring System</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+  />
+
+  <style>
+    /* ===== GLOBAL STYLES ===== */
+    html, body {
+      margin: 0; 
+      padding: 0; 
+      width: 100%; 
+      min-height: 100%;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      /* Dynamically scale base font from 14px to 16px as viewport changes */
+      font-size: clamp(14px, 1vw, 16px);
+      background: linear-gradient(
+        180deg, 
+        #3B5BA9 0%, 
+        #5681D8 100%
+      ); /* Approx. from your screenshot */
+      color: #fff;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      text-align: center;
+      padding: 1rem 1rem 0.5rem; 
+    }
+    /* Top line (e.g., DHSUD REGION IV-A) */
+    .header-title {
+      margin: 0;
+      font-weight: 700;
+      /* The text shrinks/grows between 1rem and 2rem */
+      font-size: clamp(1rem, 3vw, 2rem);
+    }
+    /* Second line (e.g., Automated DTR Monitoring System) */
+    .header-subtitle {
+      margin: 0;
+      font-weight: 400;
+      font-size: clamp(0.9rem, 2vw, 1.5rem);
+      opacity: 0.95;
+    }
+
+    /* ===== MAIN CONTAINER ===== */
+    .main-container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 1rem auto 2rem;
+    }
+
+    /* The outer translucent container behind the controls and table */
+    .content-bg {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-radius: 0.75rem;
+      padding: 1rem;
+    }
+
+    /* ===== CONTROLS (Left & Right) ===== */
+    /* 
+       1) flex-wrap: nowrap + white-space: nowrap 
+          ensures they stay on a single row. 
+       2) overflow-x: auto ensures no items are cut off; 
+          a horizontal scrollbar will appear if needed. 
+    */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap; 
+      white-space: nowrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      overflow-x: auto;
+      /* So the scrollbar is visible only if truly needed */
+      scrollbar-width: thin; /* For Firefox */
+    }
+
+    .left-controls, .right-controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap; 
+      gap: 0.5rem;
+      /* Force them to remain side by side without wrapping */
+      white-space: nowrap;
+      overflow: visible;
+    }
+
+    /* 
+       Force items to remain fully visible. 
+       flex: 0 0 auto => no shrinking below content size 
+       but combined with clamp() so the text can shrink a bit 
+       if there's some space to do so. 
+    */
+    .left-controls > * , .right-controls > * {
+      flex: 0 0 auto; 
+      font-size: clamp(0.7rem, 1vw, 1rem);
+      white-space: nowrap;
+    }
+
+    /* Example button styles */
+    button {
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 0.8rem;
+      cursor: pointer;
+      /* Prevent text wrapping inside the button */
+      white-space: nowrap;
+    }
+    .calendar-btn {
+      background-color: #ff5252; /* Red */
+      color: #fff;
+    }
+    .default-btn {
+      background-color: #007bff; /* Blue */
+      color: #fff;
+    }
+    .table-btn {
+      background-color: #f8c32d; /* Yellow */
+      color: #000;
+    }
+    .export-btn {
+      background-color: #6c757d; /* Grayish for demonstration */
+      color: #fff;
+    }
+
+    /* Search bar styling */
+    .search-input {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.35rem 0.5rem;
+      color: #000;
+      font-size: inherit; 
+      /* Minimal width so it doesn't collapse too far */
+      min-width: 100px;
+      white-space: nowrap;
+    }
+
+    /* Dropdowns */
+    select.form-select {
+      min-width: 100px;
+      color: #000;
+      padding: 0.35rem 0.5rem;
+      font-size: inherit; /* Match parent font-size */
+      white-space: nowrap;
+    }
+
+    /* ===== TABLE ===== */
+    .table-wrapper {
+      background-color: rgba(255, 255, 255, 0.15);
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+
+    /* 
+       For the table container:
+       .table-responsive adds horizontal scrolling if the table is too wide.
+    */
+    .table-responsive {
+      overflow-x: auto; 
+    }
+
+    table {
+      width: 100%;
+      min-width: 600px; /* So columns remain distinct if possible */
+      color: #fff;
+      border-collapse: separate;
+      border-spacing: 0 0.5rem; /* Some spacing between rows */
+    }
+    thead {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      font-size: clamp(0.7rem, 1vw, 1rem);
+      white-space: nowrap;
+      padding: 0.5rem;
+    }
+    tbody td {
+      background-color: rgba(255, 255, 255, 0.1);
+      font-size: clamp(0.7rem, 1vw, 1rem);
+      white-space: nowrap;
+      padding: 0.5rem;
+      color: #fff; 
+    }
+    tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header>
+    <h1 class="header-title">DHSUD REGION IV-A</h1>
+    <h2 class="header-subtitle">Automated DTR Monitoring System</h2>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <div class="main-container">
+    <!-- Outer Translucent Container -->
+    <div class="content-bg">
+      <!-- CONTROLS ROW -->
+      <div class="controls-row">
+        <!-- LEFT CONTROLS -->
+        <div class="left-controls">
+          <button class="calendar-btn">Feb 01, 2025</button>
+          <button class="default-btn">Default</button>
+          <button class="table-btn">Table</button>
+        </div>
+        <!-- RIGHT CONTROLS -->
+        <div class="right-controls">
+          <input 
+            type="text" 
+            class="search-input" 
+            placeholder="Search..."
+            aria-label="Search Bar"
+          />
+          <select class="form-select" aria-label="Sort By">
+            <option selected>Sort by</option>
+            <option value="1">Name</option>
+            <option value="2">Time In</option>
+            <option value="3">Time Out</option>
+          </select>
+          <button class="export-btn">Export</button>
+          <select class="form-select" aria-label="Filter By">
+            <option selected>Filter by</option>
+            <option value="1">Division</option>
+            <option value="2">Date</option>
+            <option value="3">Overtime</option>
+          </select>
+        </div>
+      </div>
+      <!-- END CONTROLS ROW -->
+
+      <!-- TABLE WRAPPER -->
+      <div class="table-wrapper">
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>NAME</th>
+                <th>DIV.</th>
+                <th>TIME IN</th>
+                <th>TIME OUT</th>
+                <th>OVERTIME</th>
+                <th>UNDER-TIME</th>
+                <th>TOTAL RENDERED TIME</th>
+                <th>CONVERSION OF HOURS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>01</td>
+                <td>Dela Cruz P.</td>
+                <td>HRDD</td>
+                <td>8:00 A.M.</td>
+                <td>5:00 P.M.</td>
+                <td>5 HOURS, 10 MINS</td>
+                <td>--</td>
+                <td>8 HOURS</td>
+                <td>.584</td>
+              </tr>
+              <tr>
+                <td>02</td>
+                <td>Mamiti T.</td>
+                <td>DTM</td>
+                <td>8:30 A.M.</td>
+                <td>5:30 P.M.</td>
+                <td>1 HOUR</td>
+                <td>--</td>
+                <td>7 HOURS</td>
+                <td>.456</td>
+              </tr>
+              <tr>
+                <td>03</td>
+                <td>Aguson A.</td>
+                <td>ELUP</td>
+                <td>9:00 A.M.</td>
+                <td>6:00 P.M.</td>
+                <td>--</td>
+                <td>1 HOUR</td>
+                <td>7 HOURS</td>
+                <td>.378</td>
+              </tr>
+              <!-- Add more rows as needed -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- END TABLE WRAPPER -->
+    </div>
+  </div>
+  <!-- END MAIN CONTAINER -->
+
+  <!-- Bootstrap JS (optional) -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js">
+  </script>
+</body>
+</html>

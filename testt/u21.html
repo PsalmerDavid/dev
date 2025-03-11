@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Excel + Calendar & Employee Extraction</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    /* Hide native date picker if you want to use just the button */
+    #datePicker {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Excel + Calendar & Employee Extraction</h1>
+
+  <!-- Calendar Button and Hidden Date Picker -->
+  <button id="dateButton">Loading...</button>
+  <input type="date" id="datePicker" />
+
+  <!-- File Input -->
+  <input type="file" id="excelFile" accept=".xlsx, .xls" />
+
+  <!-- Output Div -->
+  <div id="output"></div>
+
+  <!-- XLSX Library -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    // ---------------------------------------------------------------------
+    // Calendar-related functions and variables
+    // ---------------------------------------------------------------------
+    const dateButton = document.getElementById("dateButton");
+    const datePicker = document.getElementById("datePicker");
+
+    // Format a Date object into a friendly label ("January 5 2025")
+    function formatDateLabel(dateObj) {
+      const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      return `${months[dateObj.getMonth()]} ${dateObj.getDate()} ${dateObj.getFullYear()}`;
+    }
+
+    // Initialize the calendar (date picker and button label) using year, month, and day.
+    // Month is 1‑based. Day defaults to 1 if not provided.
+    function initializeCalendarWithDate(year, month, day) {
+      const safeYear = (year && !isNaN(year)) ? year : new Date().getFullYear();
+      const safeMonth = (month && !isNaN(month)) ? (month - 1) : 0; // JS months are 0‑based.
+      const safeDay = (day && !isNaN(day)) ? day : 1;
+      const dateObj = new Date(safeYear, safeMonth, safeDay);
+      const isoDate = dateObj.toISOString().split("T")[0]; // "YYYY-MM-DD"
+
+      datePicker.value = isoDate;
+      dateButton.textContent = formatDateLabel(dateObj);
+      localStorage.setItem("calendarDate", isoDate);
+    }
+
+    // Update the button label whenever the date picker value changes.
+    datePicker.addEventListener("change", () => {
+      const d = new Date(datePicker.value);
+      dateButton.textContent = formatDateLabel(d);
+    });
+
+    // Clicking the button opens the native date picker.
+    dateButton.addEventListener("click", () => {
+      datePicker.showPicker();
+    });
+
+    // On page load, check if localStorage has a saved date.
+    window.addEventListener("DOMContentLoaded", () => {
+      const savedDate = localStorage.getItem("calendarDate");
+      if (savedDate) {
+        datePicker.value = savedDate;
+        dateButton.textContent = formatDateLabel(new Date(savedDate));
+      } else {
+        // Default to today's date if none saved.
+        const today = new Date();
+        initializeCalendarWithDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
+      }
+    });
+
+    // ---------------------------------------------------------------------
+    // Month-parsing helpers for Excel cells.
+    // ---------------------------------------------------------------------
+    // Map of spelled-out months to numeric (1-12)
+    const MONTH_MAP = {
+      JANUARY: 1, FEBRUARY: 2, MARCH: 3, APRIL: 4,
+      MAY: 5, JUNE: 6, JULY: 7, AUGUST: 8,
+      SEPTEMBER: 9, OCTOBER: 10, NOVEMBER: 11, DECEMBER: 12
+    };
+
+    // Try to parse a cell that starts with "Month : ..." and return {month, year}
+    // Examples:
+    //   "Month : JANUARY 2025" -> { month: 1, year: 2025 }
+    //   "Month : 02"           -> { month: 2, year: null }
+    function parseMonthCell(cellValue) {
+      if (typeof cellValue !== "string") return null;
+      const pattern = /Month\s*:\s*(.+)/i;
+      const match = cellValue.match(pattern);
+      if (!match) return null;
+      const raw = match[1].trim(); // e.g. "JANUARY 2025" or "02"
+      if (!raw) return null;
+      const parts = raw.split(/\s+/);
+      let possibleMonth = parts[0].toUpperCase();
+      let possibleYear = null;
+      if (parts.length > 1) {
+        const yearNum = parseInt(parts[1], 10);
+        if (!isNaN(yearNum)) {
+          possibleYear = yearNum;
+        }
+      }
+      let monthNum = null;
+      if (MONTH_MAP[possibleMonth] !== undefined) {
+        monthNum = MONTH_MAP[possibleMonth];
+      } else {
+        const numericMonth = parseInt(possibleMonth, 10);
+        if (!isNaN(numericMonth) && numericMonth >= 1 && numericMonth <= 12) {
+          monthNum = numericMonth;
+        }
+      }
+      if (!monthNum) return null;
+      return {
+        month: monthNum,
+        year: possibleYear
+      };
+    }
+
+    // Scans all cells in the sheet (2D array) for a cell containing "Month : ..."
+    function findMonthInSheet(allRows) {
+      for (let r = 0; r < allRows.length; r++) {
+        const row = allRows[r];
+        for (let c = 0; c < row.length; c++) {
+          const cellVal = row[c];
+          const parsed = parseMonthCell(cellVal);
+          if (parsed) {
+            return parsed;
+          }
+        }
+      }
+      return null;
+    }
+
+    // ---------------------------------------------------------------------
+    // Employee extraction helpers
+    // ---------------------------------------------------------------------
+    // Remove the first cell if it exactly matches "DD" or "CK" (case-insensitive)
+    function stripFirstCellIfDDorCK(rowArray) {
+      if (!rowArray || rowArray.length === 0) return [];
+      const firstCell = String(rowArray[0]).toUpperCase();
+      if (firstCell === "DD" || firstCell === "CK") {
+        return rowArray.slice(1);
+      }
+      return rowArray;
+    }
+
+    // ---------------------------------------------------------------------
+    // Excel File Input Handling
+    // ---------------------------------------------------------------------
+    document.getElementById("excelFile").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        // Process the first sheet for this example.
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        // Convert the sheet into a 2D array of rows.
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // ======================================================
+        // A) Scan the entire sheet for a "Month : ..." cell.
+        // ======================================================
+        let dateInfo = findMonthInSheet(rows); // {month, year} or null
+        // Default values: day from the DD row (use 1 if no specific day found)
+        let day = 1;
+        let year = new Date().getFullYear();
+        let month = 1;
+        if (dateInfo) {
+          month = dateInfo.month || 1;
+          if (dateInfo.year && !isNaN(dateInfo.year)) {
+            year = dateInfo.year;
+          }
+        }
+        // Initialize the calendar using the parsed (or default) values.
+        initializeCalendarWithDate(year, month, day);
+
+        // ======================================================
+        // B) Parse employee data.
+        //    For each employee, we expect:
+        //      - A header row containing "ID", "Name", and "Dep.".
+        //      - The next 4 rows: two DD rows and two CK rows.
+        //      - In each DD/CK row, the first cell may be a label ("DD" or "CK")
+        //        which is stripped off.
+        // ======================================================
+        let employees = [];
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i] || [];
+          const rowString = row.join(" ");
+          const idMatch   = rowString.match(/ID[:\s]*(\d+)/i);
+          const nameMatch = rowString.match(/Name[:\s]*([A-Za-z\s]+?)(?=\s+Dep|$)/i);
+          const depMatch  = rowString.match(/Dep\.?[:\s]*([A-Za-z]+)/i);
+
+          if (idMatch && nameMatch && depMatch) {
+            let employee = {
+              id: idMatch[1].trim(),
+              name: nameMatch[1].trim(),
+              dep: depMatch[1].trim(),
+              attendance: [] // Will hold day-wise attendance.
+            };
+
+            // Expect the next 4 rows to be:
+            //   1) DD row 1, 2) CK row 1, 3) DD row 2, 4) CK row 2.
+            let ddRow1 = stripFirstCellIfDDorCK(rows[i + 1] || []);
+            let ckRow1 = stripFirstCellIfDDorCK(rows[i + 2] || []);
+            let ddRow2 = stripFirstCellIfDDorCK(rows[i + 3] || []);
+            let ckRow2 = stripFirstCellIfDDorCK(rows[i + 4] || []);
+
+            // Build a day-by-day 2D array:
+            // attendance[dayIndex] = [
+            //   [ ddRow1Value, ckRow1Value ],
+            //   [ ddRow2Value, ckRow2Value ]
+            // ]
+            const maxLen = Math.max(ddRow1.length, ckRow1.length, ddRow2.length, ckRow2.length);
+            for (let c = 0; c < maxLen; c++) {
+              const dayDD1 = ddRow1[c] || "";
+              const dayCK1 = ckRow1[c] || "";
+              const dayDD2 = ddRow2[c] || "";
+              const dayCK2 = ckRow2[c] || "";
+              employee.attendance[c] = [
+                [dayDD1, dayCK1],
+                [dayDD2, dayCK2]
+              ];
+            }
+
+            employees.push(employee);
+            // Skip the next 4 rows that have been processed.
+            i += 4;
+          }
+        }
+
+        // ======================================================
+        // C) Build and display HTML output.
+        // ======================================================
+        let outputHtml = "";
+
+        // Display calendar info.
+        outputHtml += `<p><strong>Calendar Date:</strong> ${dateButton.textContent}</p>`;
+
+        // ---- Summary Table for Employee Headers ----
+        outputHtml += `<h2>Employee Summary</h2>`;
+        outputHtml += `<table>
+                         <tr>
+                           <th>ID</th>
+                           <th>Name</th>
+                           <th>Dep.</th>
+                         </tr>`;
+        employees.forEach(emp => {
+          outputHtml += `<tr>
+                           <td>${emp.id}</td>
+                           <td>${emp.name}</td>
+                           <td>${emp.dep}</td>
+                         </tr>`;
+        });
+        outputHtml += `</table>`;
+
+        // ---- Detailed Table(s) for Each Employee ----
+        employees.forEach((emp, index) => {
+          outputHtml += `<h3>Employee #${index + 1}</h3>`;
+          outputHtml += `<p>
+              <strong>ID:</strong> ${emp.id} &nbsp; 
+              <strong>Name:</strong> ${emp.name} &nbsp; 
+              <strong>Dep.:</strong> ${emp.dep}
+            </p>`;
+          outputHtml += `<table>
+                           <tr>
+                             <th>Day</th>
+                             <th>DD1</th>
+                             <th>CK1</th>
+                             <th>DD2</th>
+                             <th>CK2</th>
+                           </tr>`;
+          emp.attendance.forEach((dayData, dayIndex) => {
+            outputHtml += `<tr>
+                             <td>${dayIndex + 1}</td>
+                             <td>${dayData[0][0]}</td>
+                             <td>${dayData[0][1]}</td>
+                             <td>${dayData[1][0]}</td>
+                             <td>${dayData[1][1]}</td>
+                           </tr>`;
+          });
+          outputHtml += `</table>`;
+        });
+
+        // ======================================================
+        // D) Create a table for Employees whose DD value matches the calendar day
+        //     and whose corresponding CK cell is not empty.
+        //
+        // For each employee, look at the attendance column corresponding to
+        // the calendar day (colIndex = calendar day - 1) and check each pair:
+        // If the DD cell equals the calendar day (as a string) and the CK cell
+        // is not empty, then store that employee's info along with the CK value.
+        // ======================================================
+        let matchingRecords = [];
+        const calDay = new Date(datePicker.value).getDate(); // numeric day from the calendar
+
+        employees.forEach(emp => {
+          const colIndex = calDay - 1;
+          if (emp.attendance && emp.attendance.length > colIndex) {
+            // emp.attendance[colIndex] is an array of two pairs.
+            const pairs = emp.attendance[colIndex];
+            pairs.forEach(pair => {
+              const ddVal = pair[0];
+              const ckVal = pair[1];
+              // Check if DD value matches the calendar day and CK is not empty.
+              if (String(ddVal).trim() === String(calDay) &&
+                  ckVal != null &&
+                  String(ckVal).trim() !== "") {
+                matchingRecords.push([emp.id, emp.name, emp.dep, ckVal]);
+              }
+            });
+          }
+        });
+
+        if (matchingRecords.length > 0) {
+          outputHtml += `<h2>Matching Employees</h2>`;
+          outputHtml += `<table>
+                           <tr>
+                             <th>ID</th>
+                             <th>Name</th>
+                             <th>Dep.</th>
+                             <th>CK Value</th>
+                           </tr>`;
+          matchingRecords.forEach(record => {
+            outputHtml += `<tr>
+                             <td>${record[0]}</td>
+                             <td>${record[1]}</td>
+                             <td>${record[2]}</td>
+                             <td>${record[3]}</td>
+                           </tr>`;
+          });
+          outputHtml += `</table>`;
+        } else {
+          outputHtml += `<h2>No Matching Employees Found</h2>`;
+        }
+
+        document.getElementById("output").innerHTML = outputHtml;
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>

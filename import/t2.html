@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DHSUD Region IV-A DTR Monitoring</title>
+  <link rel="stylesheet" href="s.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <!-- HEADER -->
+  <div class="header-container">
+    <div class="header">
+      <!-- Insert your logo beside the header texts -->
+      <img src="LOGO.png" alt="DHSUD Logo">
+      <div>
+        <h2>DHSUD REGION IV-A</h2>
+        <h3>Automated DTR Monitoring System</h3>
+        <input type="file" id="excelFile" accept=".xlsx, .xls">
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <div class="container">
+    <!-- CONTROLS -->
+    <div class="controls">
+      <!-- LEFT CONTROLS -->
+      <div class="left-controls">
+        <button class="red">Feb 01, 2025 ▼</button>
+        <button class="blue">05   Default</button>
+        <button class="yellow">05  Table</button>
+      </div>
+      <!-- RIGHT CONTROLS -->
+      <div class="right-controls">
+        <input type="text" class="search-bar" placeholder="Search...">
+        <select class="dropdown">
+          <option>Sort by</option>
+          <option>Name</option>
+          <option>Time In</option>
+          <option>Time Out</option>
+        </select>
+        <button class="export">Export</button>
+        <select class="dropdown">
+          <option>Filter by</option>
+          <option>Overtime</option>
+          <option>Under-time</option>
+          <option>Division</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-container">
+      <table id="excelTable">
+        <thead>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script src="script.js"></script>
+  <!-- END MAIN CONTAINER -->
+</body>
+</html>

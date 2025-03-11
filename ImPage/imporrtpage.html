@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Automated Attendance Monitoring System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  <!-- SheetJS library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat';
+    }
+    body {
+      background-image: url("bg.png");
+      justify-content: center;
+      align-items: center;
+      display: flex;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+      min-height: 100vh;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+    .container {
+      width: 800px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      text-align: center;
+      color: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .logo {
+      width: 40px;
+      height: auto;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 0;
+    }
+    .note {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 15px;
+    }
+    .upload-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.3);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .upload-btn:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+    .hidden {
+      display: none;
+    }
+    .preview {
+      background: rgba(255, 255, 255, 0.3);
+      padding: 10px;
+      border-radius: 6px;
+      text-align: left;
+      height: 300px;
+      overflow: auto;
+      font-size: 12px;
+      background-color: white;
+      border: 1px solid #ccc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 5px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    th {
+      background: #f4f4f4;
+    }
+    .btn-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .btn {
+      width: 48%;
+      padding: 10px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .replace-btn {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    .replace-btn:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+    .submit-btn {
+      background: #333;
+      color: white;
+    }
+    .submit-btn:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+  <!-- Initial Upload Screen -->
+  <div class="container" id="uploadScreen">
+    <img src="logo.png" alt="Logo" class="logo" />
+    <h2>Automated Attendance Monitoring System</h2>
+    <p class="note">NOTE: Ensure that the selected file is in Excel format (.xlsx or .xls)</p>
+    <input type="file" id="fileInput" accept=".xls,.xlsx" class="hidden" />
+    <button class="upload-btn" onclick="document.getElementById('fileInput').click();">
+      + UPLOAD FILE
+    </button>
+  </div>
+
+  <!-- File Preview Screen -->
+  <div class="container hidden" id="previewScreen">
+    <div class="header">
+      <img src="logo.png" alt="Logo" class="logo" />
+      <h2>Automated Attendance Monitoring System</h2>
+    </div>
+    <div class="preview">
+      <table id="excelTable"></table>
+    </div>
+    <div class="btn-container">
+      <button class="btn replace-btn" onclick="replaceFile()">Replace File</button>
+      <button class="btn submit-btn">SUBMIT</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('fileInput').addEventListener('change', function (event) {
+      const file = event.target.files[0];
+      if (file) {
+        readExcelFile(file);
+        document.getElementById('uploadScreen').classList.add('hidden');
+        document.getElementById('previewScreen').classList.remove('hidden');
+      }
+    });
+
+    function replaceFile() {
+      document.getElementById('fileInput').value = '';
+      document.getElementById('uploadScreen').classList.remove('hidden');
+      document.getElementById('previewScreen').classList.add('hidden');
+      document.getElementById('excelTable').innerHTML = "";
+    }
+
+    function readExcelFile(file) {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        // Convert sheet data to an array of arrays (including empty cells)
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        
+        // Remove rows where all cells are empty.
+        const filteredData = jsonData.filter(row => 
+          row.some(cell => cell.toString().trim() !== "")
+        );
+        
+        // If no data is found, display a message.
+        if (filteredData.length === 0) {
+          document.getElementById("excelTable").innerHTML = "<tr><td>No data found</td></tr>";
+          return;
+        }
+        
+        // Compute the maximum column count from DD rows (skip header row).
+        let maxDDColumns = 0;
+        for (let i = 1; i < filteredData.length; i++) {
+          const row = filteredData[i];
+          if (row[0] === "DD") {
+            let lastNonEmpty = row.length;
+            while (lastNonEmpty > 0 && row[lastNonEmpty - 1].toString().trim() === "") {
+              lastNonEmpty--;
+            }
+            if (lastNonEmpty > maxDDColumns) {
+              maxDDColumns = lastNonEmpty;
+            }
+          }
+        }
+        // Fallback: if no DD rows were found, use header row length.
+        if (maxDDColumns === 0) {
+          maxDDColumns = filteredData[0].length;
+        }
+        
+        // Build the table HTML.
+        let tableHTML = "<thead><tr>";
+        // Render the header row.
+        filteredData[0].forEach(cell => {
+          tableHTML += `<th>${cell}</th>`;
+        });
+        tableHTML += "</tr></thead><tbody>";
+        
+        // Process subsequent rows.
+        for (let i = 1; i < filteredData.length; i++) {
+          const row = filteredData[i];
+          tableHTML += "<tr>";
+          // For a CK row, display cells up to maxDDColumns (pad missing cells).
+          if (row[0] === "CK") {
+            for (let j = 0; j < maxDDColumns; j++) {
+              let cellValue = (j < row.length) ? row[j] : "";
+              tableHTML += `<td>${cellValue}</td>`;
+            }
+          }
+          // For a DD row, display only up to the last non-empty cell.
+          else if (row[0] === "DD") {
+            let lastNonEmpty = row.length;
+            while (lastNonEmpty > 0 && row[lastNonEmpty - 1].toString().trim() === "") {
+              lastNonEmpty--;
+            }
+            for (let j = 0; j < lastNonEmpty; j++) {
+              tableHTML += `<td>${row[j]}</td>`;
+            }
+          }
+          // For any other row, display the row as is.
+          else {
+            row.forEach(cell => {
+              tableHTML += `<td>${cell}</td>`;
+            });
+          }
+          tableHTML += "</tr>";
+        }
+        tableHTML += "</tbody>";
+        document.getElementById("excelTable").innerHTML = tableHTML;
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  </script>
+</body>
+</html>

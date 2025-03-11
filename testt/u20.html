@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Extract Data from Excel + Date Picker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+  <h1>Extract Data from Excel + Date Picker</h1>
+
+  <button id="dateButton"></button>
+  <input type="date" id="datePicker" />
+  <input type="file" id="excelFile" accept=".xlsx, .xls" />
+  <div id="output"></div>
+
+  <!-- XLSX library -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    // ---- Date Button + Picker Logic (unchanged) ----
+    const dateButton = document.getElementById('dateButton');
+    const datePicker = document.getElementById('datePicker');
+    const today = new Date();
+    datePicker.value = today.toISOString().split("T")[0];
+
+    function formatDate(dateObj) {
+      const months = ["January", "February", "March", "April", "May", "June",
+                      "July", "August", "September", "October", "November", "December"];
+      return `${months[dateObj.getMonth()]} ${dateObj.getDate()} ${dateObj.getFullYear()}`;
+    }
+    dateButton.textContent = formatDate(today);
+    dateButton.addEventListener('click', () => datePicker.showPicker());
+    datePicker.addEventListener('change', () => {
+      dateButton.textContent = formatDate(new Date(datePicker.value));
+    });
+    // -----------------------------------------------
+
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        
+        // Convert sheet to a 2D array
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        let employees = [];
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i] || [];
+          const rowString = row.join(" ");
+
+          // Detect an employee header row via regex
+          const idMatch   = rowString.match(/ID[:\s]*(\d+)/i);
+          const nameMatch = rowString.match(/Name[:\s]*([A-Za-z\s]+?)(?=\s+Dep|$)/i);
+          const depMatch  = rowString.match(/Dep\.[:\s]*([A-Za-z]+)/i);
+
+          if (idMatch && nameMatch && depMatch) {
+            // Create a new employee object
+            let employee = {
+              id:   idMatch[1].trim(),
+              name: nameMatch[1].trim(),
+              dep:  depMatch[1].trim(),
+              // We'll store 2 DD rows & 2 CK rows in a 2D array
+              // attendance[dayIndex] = [
+              //    [ ddRow1ColValue, ckRow1ColValue ],
+              //    [ ddRow2ColValue, ckRow2ColValue ]
+              // ]
+              attendance: []
+            };
+
+            // We assume the next 4 rows are:
+            // Row 1: DD
+            // Row 2: CK
+            // Row 3: DD
+            // Row 4: CK
+            const ddRow1 = rows[i + 1] || [];
+            const ckRow1 = rows[i + 2] || [];
+            const ddRow2 = rows[i + 3] || [];
+            const ckRow2 = rows[i + 4] || [];
+
+            // The maximum length across these rows
+            const maxLen = Math.max(
+              ddRow1.length, ckRow1.length,
+              ddRow2.length, ckRow2.length
+            );
+
+            // Build the 2D array for each "day" column
+            for (let c = 0; c < maxLen; c++) {
+              const ddVal1 = ddRow1[c] || "";
+              const ckVal1 = ckRow1[c] || "";
+              const ddVal2 = ddRow2[c] || "";
+              const ckVal2 = ckRow2[c] || "";
+
+              // For each day, store two pairs: [DD1, CK1], [DD2, CK2]
+              employee.attendance.push([
+                [ddVal1, ckVal1],
+                [ddVal2, ckVal2]
+              ]);
+            }
+
+            // Add to employees array
+            employees.push(employee);
+
+            // Skip ahead 4 rows so we don't re-parse them
+            i += 4;
+          }
+        }
+
+        // ---- Build an HTML output to display everything ----
+        let outputHtml = "";
+        
+        employees.forEach((emp, empIndex) => {
+          outputHtml += `<h3>Employee #${empIndex + 1}</h3>`;
+          outputHtml += `<p>
+                           <strong>ID:</strong> ${emp.id} &nbsp;|&nbsp;
+                           <strong>Name:</strong> ${emp.name} &nbsp;|&nbsp;
+                           <strong>Dep.:</strong> ${emp.dep}
+                         </p>`;
+          outputHtml += `<table>
+                           <tr>
+                             <th>Day</th>
+                             <th>DD #1</th>
+                             <th>CK #1</th>
+                             <th>DD #2</th>
+                             <th>CK #2</th>
+                           </tr>`;
+
+          // emp.attendance[dayIndex] = [ [ddVal1, ckVal1], [ddVal2, ckVal2] ]
+          emp.attendance.forEach((pairs, dayIndex) => {
+            // pairs = [[dd1, ck1], [dd2, ck2]]
+            const [ pair1, pair2 ] = pairs;
+            outputHtml += `<tr>
+                             <td>${dayIndex + 1}</td>
+                             <td>${pair1[0]}</td>
+                             <td>${pair1[1]}</td>
+                             <td>${pair2[0]}</td>
+                             <td>${pair2[1]}</td>
+                           </tr>`;
+          });
+          outputHtml += `</table>`;
+        });
+
+        document.getElementById('output').innerHTML = outputHtml;
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>

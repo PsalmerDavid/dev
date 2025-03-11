@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Extract Data from Excel + Date Picker</title>
+  <style>
+    /* Simple styling */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    ul {
+      list-style-type: disc;
+      margin-left: 20px;
+    }
+    /* Hide the native date picker by default */
+    #datePicker {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Extract Data from Excel + Date Picker</h1>
+
+  <!-- 1) A button labeled with the current date -->
+  <button id="dateButton"></button>
+
+  <!-- 2) A hidden input (type="date") for the popup calendar -->
+  <input type="date" id="datePicker" />
+
+  <p>
+    Select an Excel file. The script will scan every cell for <strong>ID:</strong>, <strong>Name:</strong>, and <strong>Dep.:</strong>
+    and extract the values.
+  </p>
+  <!-- File input -->
+  <input type="file" id="excelFile" accept=".xlsx, .xls" />
+
+  <!-- Output container for Excel data -->
+  <div id="output"></div>
+
+  <!-- Include SheetJS library from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    /*****************************************************
+     * 1) DATE PICKER LOGIC
+     *****************************************************/
+    const dateButton = document.getElementById('dateButton');
+    const datePicker = document.getElementById('datePicker');
+
+    // Helper to format date as "Month day year", e.g. "March 9 2025"
+    function formatDate(dateObj) {
+      const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      const monthName = months[dateObj.getMonth()];
+      const day = dateObj.getDate();
+      const year = dateObj.getFullYear();
+      return `${monthName} ${day} ${year}`;
+    }
+
+    // Set button label to today's date on load
+    const today = new Date();
+    // Set the hidden datePicker to today's date in yyyy-mm-dd format
+    datePicker.value = today.toISOString().split("T")[0];
+    dateButton.textContent = formatDate(today);
+
+    // When the button is clicked, show the native date picker
+    dateButton.addEventListener('click', () => {
+      // Attempt to use the modern showPicker() method if supported
+      if (typeof datePicker.showPicker === 'function') {
+        datePicker.showPicker();
+      } else {
+        // Fallback: programmatically click the date input
+        datePicker.click();
+      }
+    });
+
+    // When the user picks a date, update the button label
+    datePicker.addEventListener('change', () => {
+      const selectedDate = new Date(datePicker.value);
+      dateButton.textContent = formatDate(selectedDate);
+    });
+
+
+    /*****************************************************
+     * 2) EXCEL READING & PARSING LOGIC
+     *****************************************************/
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        // Use the first worksheet
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        // Convert sheet to an array of arrays (rows)
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Arrays to store extracted values
+        const ids = [];
+        const names = [];
+        const deps = [];
+        
+        // Loop through each row and each cell
+        rows.forEach(row => {
+          if (row && row.length > 0) {
+            row.forEach(cell => {
+              if (typeof cell === 'string') {
+                // Regex for ID: capture only digits
+                const idMatch = cell.match(/ID[:\s]*(\d+)/i);
+                if (idMatch) {
+                  ids.push(idMatch[1].trim());
+                }
+
+                // Regex for Name: capture letters/spaces, stopping if we see " Dep" or end of string
+                const nameMatch = cell.match(/Name[:\s]*([A-Za-z\s]+?)(?=\s+Dep|$)/i);
+                if (nameMatch) {
+                  names.push(nameMatch[1].trim());
+                }
+
+                // Regex for Dep.: capture letters only
+                const depMatch = cell.match(/Dep\.?[:\s]*([A-Za-z]+)/i);
+                if (depMatch) {
+                  deps.push(depMatch[1].trim());
+                }
+              }
+            });
+          }
+        });
+        
+        // Build HTML to display the results
+        let outputHtml = "<h2>Extracted Data</h2>";
+
+        // IDs
+        outputHtml += "<h3>ID Values</h3><ul>";
+        ids.forEach(id => {
+          outputHtml += `<li>${id}</li>`;
+        });
+        outputHtml += "</ul>";
+
+        // Names
+        outputHtml += "<h3>Name Values</h3><ul>";
+        names.forEach(name => {
+          outputHtml += `<li>${name}</li>`;
+        });
+        outputHtml += "</ul>";
+
+        // Deps
+        outputHtml += "<h3>Dep. Values</h3><ul>";
+        deps.forEach(dep => {
+          outputHtml += `<li>${dep}</li>`;
+        });
+        outputHtml += "</ul>";
+
+        document.getElementById('output').innerHTML = outputHtml;
+      };
+
+      // Read the file as an array buffer
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>

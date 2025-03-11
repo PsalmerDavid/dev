@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Extract Data from Excel</title>
+  <style>
+    /* Simple styling */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    ul {
+      list-style-type: disc;
+      margin-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Extract Data from Excel</h1>
+  <p>Select an Excel file. The script will scan every cell for keywords "ID", "Name", and "Dep." and extract only the desired parts:</p>
+  <ul>
+    <li><strong>ID:</strong> numeric values only (e.g. <code>5</code>, <code>6</code>, <code>7</code>).</li>
+    <li><strong>Name:</strong> the name string (e.g. <code>BANDOJO E</code>).</li>
+    <li><strong>Dep.:</strong> the department code (e.g. <code>ELUPDD</code>).</li>
+  </ul>
+  <!-- File input -->
+  <input type="file" id="excelFile" accept=".xlsx, .xls" />
+
+  <!-- Output container -->
+  <div id="output"></div>
+
+  <!-- Include SheetJS library from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        // Use the first worksheet
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        // Convert sheet to an array of rows
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Arrays to store extracted values
+        const ids = [];
+        const names = [];
+        const deps = [];
+        
+        // Loop through each row and each cell
+        rows.forEach(row => {
+          if (row && row.length > 0) {
+            row.forEach(cell => {
+              if (typeof cell === 'string') {
+                // Regex for ID: capture only numeric digits
+                const idMatch = cell.match(/ID[:\s]*(\d+)/i);
+                if (idMatch) {
+                  ids.push(idMatch[1].trim());
+                }
+                // Regex for Name: capture letters and spaces only (adjust if names include other characters)
+                const nameMatch = cell.match(/Name[:\s]*([A-Za-z\s]+)/i);
+                if (nameMatch) {
+                  names.push(nameMatch[1].trim());
+                }
+                // Regex for Dep.: capture letters only (adjust if department codes include numbers)
+                const depMatch = cell.match(/Dep\.?[:\s]*([A-Za-z]+)/i);
+                if (depMatch) {
+                  deps.push(depMatch[1].trim());
+                }
+              }
+            });
+          }
+        });
+        
+        // Build HTML to display the results
+        let outputHtml = "<h2>Extracted Data</h2>";
+        outputHtml += "<h3>ID Values</h3><ul>" + ids.map(id => `<li>${id}</li>`).join('') + "</ul>";
+        outputHtml += "<h3>Name Values</h3><ul>" + names.map(name => `<li>${name}</li>`).join('') + "</ul>";
+        outputHtml += "<h3>Dep. Values</h3><ul>" + deps.map(dep => `<li>${dep}</li>`).join('') + "</ul>";
+        document.getElementById('output').innerHTML = outputHtml;
+      };
+      // Read the file as an array buffer
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>

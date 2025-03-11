@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Controls</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #8c9685;
+            margin: 0;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 90%;
+            max-width: 1200px;
+            gap: 10px;
+        }
+        .left-controls, .right-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap;
+        }
+        button, input, select {
+            padding: 8px 12px;
+            font-size: 1.2vw;
+            white-space: nowrap;
+        }
+        button {
+            border: none;
+            cursor: pointer;
+            color: white;
+        }
+        .date-button { background-color: #d9534f; }
+        .default-button { background-color: #337ab7; }
+        .table-button { background-color: #f0ad4e; }
+        .export-button { background-color: #777; color: white; }
+        input {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        select {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                padding: 0 10px;
+            }
+            button, input, select {
+                font-size: 2vw;
+                padding: 5px 8px;
+            }
+        }
+        @media (max-width: 480px) {
+            button, input, select {
+                font-size: 3vw;
+                padding: 4px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-controls">
+            <button class="date-button">Feb 01, 2025 ▼</button>
+            <button class="default-button">Default</button>
+            <button class="table-button">Table</button>
+        </div>
+        <div class="right-controls">
+            <input type="text" placeholder="Search...">
+            <select>
+                <option>Sort by</option>
+            </select>
+            <button class="export-button">Export as Excel File</button>
+            <select>
+                <option>Filter by</option>
+            </select>
+        </div>
+    </div>
+</body>
+</html>

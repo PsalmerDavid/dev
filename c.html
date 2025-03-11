@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DHSUD Region IV-A DTR Monitoring</title>
+  <style>
+    /* Global resets & font */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      background: #2f4f2f;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* Header container */
+    .header-container {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      color: black;
+    }
+    .header h2 {
+      font-size: 2em;
+      font-weight: bold;
+    }
+    .header h3 {
+      font-size: 1.2em;
+      font-weight: normal;
+    }
+
+    /* Main container */
+    .container {
+      height: 366px;         /* matches your snippet */
+      max-width: 1175px;     /* matches your snippet */
+      margin: auto;
+      background: rgba(244, 244, 244, 0.5);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+      color: black;
+    }
+
+    /* Controls row */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 0;
+      flex-wrap: nowrap;
+      white-space: nowrap;   /* ensures single line */
+      overflow-x: auto;      /* horizontal scroll if needed */
+    }
+    .left-controls,
+    .right-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    .right-controls {
+      margin-left: auto;
+    }
+
+    /* Shared style for buttons, inputs, selects */
+    .controls button,
+    .controls input,
+    .controls select {
+      border: 1px solid #ccc;
+      border-radius: 9px;
+      font-size: 13px;       /* exact font size from reference */
+      height: 37px;          /* exact height from reference */
+      padding: 3px;          /* from your snippet */
+      text-align: center;
+      white-space: nowrap;
+      transition: all 0.3s ease-in-out;
+    }
+
+    /* Left controls: 3 buttons each 132px wide */
+    .left-controls .red,
+    .left-controls .blue,
+    .left-controls .yellow {
+      width: 132px;
+      color: white;
+      cursor: pointer;
+    }
+    .red {
+      background-color: #e74c3c; /* from reference */
+    }
+    .blue {
+      background-color: #3498db; /* from reference */
+    }
+    .yellow {
+      background-color: #f39c12; /* from reference */
+    }
+
+    /* Right controls: input, select, button with exact widths */
+    .right-controls .search-bar {
+      width: 136px; /* search input width */
+    }
+    .right-controls select {
+      width: 106px; /* selects width */
+      cursor: pointer;
+    }
+    .right-controls button {
+      width: 95px;  /* export button width */
+      cursor: pointer;
+    }
+
+    /* Table container & styling */
+    .table-container {
+      margin-top: 20px;
+      overflow-x: visible;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-size: 13px;
+      table-layout: fixed;
+    }
+    th,
+    td {
+      padding: 15px;
+      border: 1px solid black;
+      word-wrap: break-word;
+    }
+    th {
+      background-color: #2c3e50;
+      color: white;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    /* Media Queries for smaller screens */
+    @media (max-width: 1024px) {
+      .controls {
+        gap: 6px;
+      }
+      .controls button,
+      .controls input,
+      .controls select {
+        font-size: 12px;
+        height: 35px;
+      }
+      /* Slightly narrower widths for narrower screens */
+      .left-controls .red,
+      .left-controls .blue,
+      .left-controls .yellow {
+        width: 120px;
+      }
+      .right-controls .search-bar {
+        width: 120px;
+      }
+      .right-controls select {
+        width: 95px;
+      }
+      .right-controls button {
+        width: 85px;
+      }
+      th,
+      td {
+        font-size: 12px;
+      }
+    }
+    @media (max-width: 768px) {
+      .controls {
+        gap: 4px;
+      }
+      .controls button,
+      .controls input,
+      .controls select {
+        font-size: 11px;
+        height: 32px;
+      }
+      .left-controls .red,
+      .left-controls .blue,
+      .left-controls .yellow {
+        width: 110px;
+      }
+      .right-controls .search-bar {
+        width: 110px;
+      }
+      .right-controls select {
+        width: 85px;
+      }
+      .right-controls button {
+        width: 75px;
+      }
+      table {
+        font-size: 12px;
+      }
+      th,
+      td {
+        padding: 10px;
+      }
+    }
+    @media (max-width: 480px) {
+      .controls {
+        gap: 2px;
+      }
+      .controls button,
+      .controls input,
+      .controls select {
+        font-size: 10px;
+        height: 30px;
+      }
+      .left-controls .red,
+      .left-controls .blue,
+      .left-controls .yellow {
+        width: 100px;
+      }
+      .right-controls .search-bar {
+        width: 100px;
+      }
+      .right-controls select {
+        width: 75px;
+      }
+      .right-controls button {
+        width: 65px;
+      }
+      table {
+        font-size: 11px;
+      }
+      th,
+      td {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header-container">
+    <div class="header">
+      <h2>DHSUD REGION IV-A</h2>
+      <h3>Automated DTR Monitoring System</h3>
+    </div>
+  </div>
+  <div class="container">
+    <div class="controls">
+      <div class="left-controls">
+        <button class="red">Feb 01, 2025 ▼</button>
+        <button class="blue">Default</button>
+        <button class="yellow">Table</button>
+      </div>
+      <div class="right-controls">
+        <input type="text" class="search-bar" placeholder="Search...">
+        <select>
+          <option>Sort by</option>
+          <option>Name</option>
+          <option>Time In</option>
+          <option>Time Out</option>
+        </select>
+        <button>Export as Excel File</button>
+        <select>
+          <option>Filter by</option>
+          <option>Overtime</option>
+          <option>Under-time</option>
+          <option>Division</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>NAME</th>
+            <th>DIV.</th>
+            <th>TIME IN</th>
+            <th>TIME OUT</th>
+            <th>OVERTIME</th>
+            <th>UNDER-TIME</th>
+            <th>TOTAL RENDERED TIME</th>
+            <th>CONVERSION OF HOURS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>01</td>
+            <td>Dela Cruz P.D.</td>
+            <td>HRED</td>
+            <td>5:00 A.M.</td>
+            <td>5:00 P.M.</td>
+            <td>5 HOURS, 10 MINS</td>
+            <td>30 MINS</td>
+            <td>8</td>
+            <td>.584</td>
+          </tr>
+          <tr>
+            <td>02</td>
+            <td>Mamiit T.</td>
+            <td>ADMIN</td>
+            <td>8:30 A.M.</td>
+            <td>5:30 P.M.</td>
+            <td>8 HOURS</td>
+            <td>0 HOUR</td>
+            <td>0</td>
+            <td>.000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Extract Data from Excel + Date Picker - Debug Version</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    /* Hide the date input */
+    #datePicker {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Extract Data from Excel + Date Picker - Debug Version</h1>
+  <!-- Date picker button and hidden date input -->
+  <button id="dateButton"></button>
+  <input type="date" id="datePicker" />
+  
+  <p>Select an Excel file to extract employee data.</p>
+  <input type="file" id="excelFile" accept=".xlsx, .xls" />
+  
+  <div id="output"></div>
+  
+  <!-- Include SheetJS Library -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    /****************************************************
+     * 1) DATE PICKER LOGIC
+     ****************************************************/
+    const dateButton = document.getElementById('dateButton');
+    const datePicker = document.getElementById('datePicker');
+    
+    function formatDate(dateObj) {
+      const months = [
+        'January','February','March','April','May','June',
+        'July','August','September','October','November','December'
+      ];
+      return `${months[dateObj.getMonth()]} ${dateObj.getDate()} ${dateObj.getFullYear()}`;
+    }
+    
+    const today = new Date();
+    datePicker.value = today.toISOString().split("T")[0];
+    dateButton.textContent = formatDate(today);
+    
+    dateButton.addEventListener('click', () => {
+      if (typeof datePicker.showPicker === 'function') {
+        datePicker.showPicker();
+      } else {
+        datePicker.click();
+      }
+    });
+    
+    datePicker.addEventListener('change', () => {
+      dateButton.textContent = formatDate(new Date(datePicker.value));
+    });
+    
+    /****************************************************
+     * 2) EXCEL READING & DD/CK TABLE DISPLAY WITH DEBUG LOGS
+     ****************************************************/
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        // Use the first worksheet
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        console.log("All rows:", rows);
+        
+        let employees = [];
+        
+        // Loop through rows to find the employee header (ID, Name, Dep.)
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          console.log("Row", i, row);
+          if (!row) continue;
+          
+          // Check for ID, Name, Dep. using regex
+          const idCellIndex = row.findIndex(cell => typeof cell === 'string' && /ID[:\s]*(\d+)/i.test(cell));
+          const nameCellIndex = row.findIndex(cell => typeof cell === 'string' && /Name[:\s]*([A-Za-z\s]+?)(?=\s+Dep|$)/i.test(cell));
+          const depCellIndex = row.findIndex(cell => typeof cell === 'string' && /Dep\.?[:\s]*([A-Za-z]+)/i.test(cell));
+          
+          if (idCellIndex !== -1 && nameCellIndex !== -1 && depCellIndex !== -1) {
+            console.log("Found employee header at row", i, row);
+            const id = row[idCellIndex].match(/ID[:\s]*(\d+)/i)[1].trim();
+            const name = row[nameCellIndex].match(/Name[:\s]*([A-Za-z\s]+?)(?=\s+Dep|$)/i)[1].trim();
+            const dep = row[depCellIndex].match(/Dep\.?[:\s]*([A-Za-z]+)/i)[1].trim();
+            console.log("Employee detected:", { id, name, dep });
+            
+            // Mark the start of this employee's block
+            const startIndex = i;
+            let endIndex = rows.length - 1;
+            
+            // Find the row with 'CK' and 31 to mark the block end
+            for (let j = i + 1; j < rows.length; j++) {
+              const rowJ = rows[j];
+              if (!rowJ) continue;
+              const hasCK = rowJ.some(cell => typeof cell === 'string' && cell.toLowerCase().includes('ck'));
+              const has31 = rowJ.some(cell => parseFloat(cell) === 31);
+              if (hasCK && has31) {
+                endIndex = j + 1;
+                console.log("Found block end at row", j, rowJ);
+                break;
+              }
+            }
+            console.log("Employee block from row", startIndex, "to", endIndex);
+            
+            // Gather the DD/CK rows within this block
+            let ddCkArray = [];
+            for (let r = startIndex; r <= endIndex; r++) {
+              const currentRow = rows[r];
+              if (!currentRow || currentRow.length === 0) continue;
+              // Check if the first cell (trimmed) equals 'DD'
+              if (typeof currentRow[0] === 'string' && currentRow[0].trim() === 'DD') {
+                let ddValues = currentRow.slice(1);
+                let ckValues = [];
+                // Check if the next row exists and its first cell (trimmed) equals 'CK'
+                if (r + 1 <= endIndex && rows[r + 1] && typeof rows[r + 1][0] === 'string' && rows[r + 1][0].trim() === 'CK') {
+                  ckValues = rows[r + 1].slice(1);
+                }
+                console.log("Found DD/CK pair at rows", r, "and", r+1, { ddValues, ckValues });
+                ddCkArray.push([ddValues, ckValues]);
+              }
+            }
+            
+            // Store the employee data along with the ddCkArray
+            employees.push([id, name, dep, ddCkArray]);
+            // Skip to the end of this block to avoid reprocessing
+            i = endIndex;
+          }
+        }
+        console.log("Employees array with DD/CK data:", employees);
+        
+        // Build an HTML table with columns: ID, Name, Dep., DD Row, CK Row
+        let outputHtml = "<h2>Extracted Employee Data</h2>";
+        outputHtml += "<table>";
+        outputHtml += "<tr><th>ID</th><th>Name</th><th>Dep.</th><th>DD Row</th><th>CK Row</th></tr>";
+        employees.forEach(emp => {
+          const [id, name, dep, ddCkArray] = emp;
+          if (ddCkArray.length === 0) {
+            outputHtml += `<tr>
+              <td>${id}</td>
+              <td>${name}</td>
+              <td>${dep}</td>
+              <td></td>
+              <td></td>
+            </tr>`;
+          } else {
+            ddCkArray.forEach(pair => {
+              const ddVals = pair[0].join(', ');
+              const ckVals = pair[1].join(', ');
+              outputHtml += `<tr>
+                <td>${id}</td>
+                <td>${name}</td>
+                <td>${dep}</td>
+                <td>${ddVals}</td>
+                <td>${ckVals}</td>
+              </tr>`;
+            });
+          }
+        });
+        outputHtml += "</table>";
+        document.getElementById('output').innerHTML = outputHtml;
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>

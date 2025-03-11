@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Extract Data from Excel</title>
+  <style>
+    /* Simple styling */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    ul {
+      list-style-type: disc;
+      margin-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Extract Data from Excel</h1>
+  <p>
+    This script looks for <strong>ID:</strong> (numbers only), <strong>Name:</strong> (letters/spaces only),
+    and <strong>Dep.:</strong> (letters only) anywhere in each cell.
+    <br />
+    It also prevents the <strong>Name</strong> field from including "Dep" if they appear in the same cell.
+  </p>
+  <!-- File input -->
+  <input type="file" id="excelFile" accept=".xlsx, .xls" />
+
+  <!-- Output container -->
+  <div id="output"></div>
+
+  <!-- Include SheetJS library from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        // Use the first worksheet
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        // Convert sheet to an array of arrays (rows)
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Arrays to store extracted values
+        const ids = [];
+        const names = [];
+        const deps = [];
+        
+        // Loop through each row and each cell
+        rows.forEach(row => {
+          if (row && row.length > 0) {
+            row.forEach(cell => {
+              if (typeof cell === 'string') {
+                // Regex for ID: capture only digits
+                const idMatch = cell.match(/ID[:\s]*(\d+)/i);
+                if (idMatch) {
+                  ids.push(idMatch[1].trim());
+                }
+
+                // Regex for Name: capture letters/spaces, stopping if we see " Dep"
+                // or the end of the string. The `+?` is lazy, so it won't
+                // greedily capture beyond "Dep".
+                const nameMatch = cell.match(/Name[:\s]*([A-Za-z\s]+?)(?=\s+Dep|$)/i);
+                if (nameMatch) {
+                  names.push(nameMatch[1].trim());
+                }
+
+                // Regex for Dep.: capture letters only
+                const depMatch = cell.match(/Dep\.?[:\s]*([A-Za-z]+)/i);
+                if (depMatch) {
+                  deps.push(depMatch[1].trim());
+                }
+              }
+            });
+          }
+        });
+        
+        // Build HTML to display the results
+        let outputHtml = "<h2>Extracted Data</h2>";
+
+        // IDs
+        outputHtml += "<h3>ID Values</h3><ul>";
+        ids.forEach(id => {
+          outputHtml += `<li>${id}</li>`;
+        });
+        outputHtml += "</ul>";
+
+        // Names
+        outputHtml += "<h3>Name Values</h3><ul>";
+        names.forEach(name => {
+          outputHtml += `<li>${name}</li>`;
+        });
+        outputHtml += "</ul>";
+
+        // Deps
+        outputHtml += "<h3>Dep. Values</h3><ul>";
+        deps.forEach(dep => {
+          outputHtml += `<li>${dep}</li>`;
+        });
+        outputHtml += "</ul>";
+
+        document.getElementById('output').innerHTML = outputHtml;
+      };
+
+      // Read the file as an array buffer
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>
