@@ -1,0 +1,51 @@
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  background-color: #eff2f5;
+}
+
+button {
+  position: absolute;
+  -webkit-animation: ripple 5s infinite;
+          animation: ripple 5s infinite;
+  border-radius: 100%;
+  border: none;
+  background-color: #eff2f5;
+  box-shadow: inset 10px 10px 20px #a5a7a9, inset -10px -10px 20px #ffffff;
+  transition: 0.33s ease-in all;
+  opacity: 0;
+}
+
+@-webkit-keyframes ripple {
+  0% {
+    width: 20px;
+    height: 20px;
+    opacity: 1;
+  }
+  100% {
+    width: 800px;
+    height: 400px;
+    opacity: 0;
+  }
+}
+
+@keyframes ripple {
+  0% {
+    width: 20px;
+    height: 20px;
+    opacity: 1;
+  }
+  100% {
+    width: 800px;
+    height: 400px;
+    opacity: 0;
+  }
+}
+.container button:nth-child(1) {
+  -webkit-animation-delay: 500ms;
+          animation-delay: 500ms;
+}
+

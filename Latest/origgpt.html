@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DHSUD Region IV-A DTR Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  <style>
+    /* Reset & Global */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat';
+    }
+
+    body {
+      background-color: rgb(36, 82, 193);
+      text-align: center;
+      padding: 20px;
+      min-height: 720px;
+      overflow: hidden;
+    }
+
+    .TV .group {
+      position: relative;
+      width: 2496px;
+      top: -477px;
+      left: -1091px;
+    }
+
+    .TV .overlap-group {
+      position: relative;
+    }
+
+    /* Ensure the ellipses can host the ripple effect */
+    .TV .ellipse,
+    .TV .ellipse-2,
+    .TV .ellipse-3,
+    .TV .div {
+      position: absolute;
+      overflow: hidden;
+    }
+
+    /* Ellipse Styles */
+    .TV .ellipse {
+      width: 1824px;
+      height: 1824px;
+      top: 6px;
+      left: 672px;
+      border-radius: 912px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 57.62%
+      );
+    }
+
+    .TV .div {
+      width: 1830px;
+      height: 1830px;
+      top: 0;
+      left: 0;
+      border-radius: 915px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 99.99%
+      );
+    }
+
+    .TV .ellipse-2 {
+      width: 1185px;
+      height: 1187px;
+      top: 516px;
+      left: 472px;
+      border-radius: 592.5px / 593.5px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 99.99%
+      );
+    }
+
+    .TV .ellipse-3 {
+      width: 1014px;
+      height: 1014px;
+      top: 816px;
+      left: 520px;
+      border-radius: 507px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 99.99%
+      );
+    }
+
+    /* Ripple Animation */
+    .TV .ellipse::after,
+    .TV .ellipse-2::after,
+    .TV .ellipse-3::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.7);
+      opacity: 0;
+      animation: ripple 3s ease-out infinite;
+    }
+
+    /* Optional: Stagger the ripple effect for a more natural look */
+    .TV .ellipse::after {
+      animation-delay: 0s;
+    }
+    .TV .ellipse-2::after {
+      animation-delay: 0.5s;
+    }
+    .TV .ellipse-3::after {
+      animation-delay: 1s;
+    }
+
+    @keyframes ripple {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+      }
+      80% {
+        opacity: 0.3;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="TV">
+    <div class="group-wrapper">
+      <div class="group">
+        <div class="overlap-group">
+          <div class="ellipse"></div>
+          <div class="div"></div>
+          <div class="ellipse-2"></div>
+          <div class="ellipse-3"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- HEADER -->
+  <!-- MAIN CONTENT CONTAINER -->
+</body>
+</html>

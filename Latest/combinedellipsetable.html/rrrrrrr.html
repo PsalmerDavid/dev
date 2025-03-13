@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ellipses Off-Screen Demo</title>
+  <style>
+    /* Reset & Global */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    /* Body takes up full window, hides horizontal scroll */
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: rgb(36, 82, 193);
+    }
+
+    /* Container to hold all ellipses */
+    .ellipses-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Base ellipse styles */
+    .ellipse {
+      position: absolute;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+
+    /* 
+       Example sizes & positions:
+       Each ellipse is half off the screen horizontally
+       by setting left = -1/2 of its width.
+       Adjust top & left to match your design exactly.
+    */
+
+    .ellipse-0 {
+      width: 1824px;
+      height: 1824px;
+      top: 6px;
+      left: -912px; /* half of 1824 is 912 */
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 57.62%
+      );
+    }
+
+    .ellipse-1 {
+      width: 1830px;
+      height: 1830px;
+      top: 0;
+      left: -915px; /* half of 1830 is 915 */
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 99.99%
+      );
+    }
+
+    .ellipse-2 {
+      width: 1185px;
+      height: 1187px;
+      top: 516px;
+      left: -592px; /* half of 1185 is ~592 */
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 99.99%
+      );
+    }
+
+    .ellipse-3 {
+      width: 1014px;
+      height: 1014px;
+      top: 816px;
+      left: -507px; /* half of 1014 is 507 */
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 99.99%
+      );
+    }
+  </style>
+</head>
+<body>
+  <div class="ellipses-container">
+    <!-- Adjust the number of ellipses and class names as needed -->
+    <div class="ellipse ellipse-0"></div>
+    <div class="ellipse ellipse-1"></div>
+    <div class="ellipse ellipse-2"></div>
+    <div class="ellipse ellipse-3"></div>
+  </div>
+</body>
+</html>

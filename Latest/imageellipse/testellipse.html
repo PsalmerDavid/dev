@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DHSUD Region IV-A DTR Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery.ripples@0.6.3/dist/jquery.ripples-min.js"></script>
+  
+  <style>
+    /* Reset & Global */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat';
+    }
+
+    body {
+      background-color: rgb(36, 82, 193);
+      text-align: center;
+      padding: 20px;
+      min-height: 720px;
+      overflow: hidden;
+    }
+
+    .TV .group {
+      position: relative;
+      width: 2496px;
+      top: -477px;
+      left: -1091px;
+    }
+
+    .TV .overlap-group {
+      position: relative;
+    }
+
+    .TV .ellipse,
+    .TV .ellipse-2,
+    .TV .ellipse-3,
+    .TV .div {
+      position: absolute;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+
+    .TV .ellipse {
+      width: 1824px;
+      height: 1824px;
+      top: 6px;
+      left: 672px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 57.62%
+      );
+    }
+
+    .TV .div {
+      width: 1830px;
+      height: 1830px;
+      top: 0;
+      left: 0;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 99.99%
+      );
+    }
+
+    .TV .ellipse-2 {
+      width: 1185px;
+      height: 1187px;
+      top: 516px;
+      left: 472px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 99.99%
+      );
+    }
+
+    .TV .ellipse-3 {
+      width: 1014px;
+      height: 1014px;
+      top: 816px;
+      left: 520px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgb(131, 175, 245) 0%,
+        rgb(36, 82, 193) 99.99%
+      );
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="TV">
+    <div class="group-wrapper">
+      <div class="group">
+        <div class="overlap-group">
+          <div class="ellipse"></div>
+          <div class="div"></div>
+          <div class="ellipse-2"></div>
+          <div class="ellipse-3"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    $(document).ready(function() {
+      // Apply ripple effect to each ellipse
+      $(".ellipse, .ellipse-2, .ellipse-3").ripples({
+        resolution: 512,  // High resolution for smooth effect
+        dropRadius: 20,  // Initial small ripple
+        perturbance: 0.02, // More realistic subtle water movement
+        interactive: false // Auto-ripple instead of mouse interaction
+      });
+
+      function triggerRipple(element, size) {
+        let centerX = size / 2;
+        let centerY = size / 2;
+        
+        element.ripples('drop', centerX, centerY, size / 2, 0.5); // Stronger initial ripple
+
+        // Gradually decrease perturbance for fading effect
+        setTimeout(() => element.ripples('set', 'perturbance', 0.015), 1000);
+        setTimeout(() => element.ripples('set', 'perturbance', 0.01), 2000);
+        setTimeout(() => element.ripples('set', 'perturbance', 0.005), 2500);
+        setTimeout(() => element.ripples('set', 'perturbance', 0), 3000); // Fully fades at 3 seconds
+      }
+
+      // Trigger one ripple per ellipse every 3 seconds
+      setInterval(() => {
+        triggerRipple($(".ellipse"), 1824);
+        triggerRipple($(".ellipse-2"), 1185);
+        triggerRipple($(".ellipse-3"), 1014);
+      }, 3000);
+    });
+  </script>
+
+</body>
+</html>
